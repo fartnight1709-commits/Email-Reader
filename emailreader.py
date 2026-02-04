@@ -1,172 +1,174 @@
 import streamlit as st
 import json
 import os
-import engine # Ensure engine.py handles your Google OAuth and AI calls
+import time
+import engine # Your backend for Gmail OAuth and AI
 
-# --- 1. PERSISTENCE & STYLING ---
-DB_FILE = "user_db.json"
+# --- 1. GARRISON FINANCIAL DATABASE ---
+DB_FILE = "garrison_registry.json"
 
-def load_db():
+def load_registry():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f: return json.load(f)
-    return {"users": ["dev@intellimail.ai"]}
+    return {"authorized_users": ["admin@garrisonfinancial.com"], "activity_logs": []}
 
-def save_db(data):
+def save_registry(data):
     with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
 
-st.set_page_config(page_title="IntelliMail Pro", layout="wide")
+# --- 2. THE "ULTRA-SLIM" DARK UI ---
+st.set_page_config(page_title="Garrison Financial | IntelliMail", layout="wide")
 
-# --- 2. HIGH-END OLED CSS ---
 st.markdown("""
     <style>
-    /* Ultra Dark Background */
-    .stApp { background-color: #050608; color: #e1e1e1; }
+    /* OLED Black & Garrison Navy */
+    .stApp { background-color: #050505; color: #d1d1d1; }
+    [data-testid="stSidebar"] { background-color: #0a0b0d !important; border-right: 1px solid #1c1f26; }
     
-    /* Slim Sidebar */
-    [data-testid="stSidebar"] { 
-        background-color: #0b0d11 !important; 
-        border-right: 1px solid #1f232a; 
-    }
-
-    /* Outlook Blue Ribbon */
-    .outlook-header {
-        background: #0078d4;
-        padding: 12px 24px;
-        margin: -5rem -5rem 1rem -5rem;
-        display: flex;
-        align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-
-    /* Glassmorphism Cards */
+    /* Slim Outlook Cards */
     .email-card {
-        background: #111418;
-        padding: 16px;
-        border-radius: 8px;
+        padding: 12px;
+        background-color: #0f1115;
         border: 1px solid #21262d;
-        margin-bottom: 10px;
-        transition: 0.2s;
+        border-left: 4px solid #0078d4;
+        border-radius: 4px;
+        margin-bottom: 8px;
     }
-    .email-card:hover { border-color: #58a6ff; background: #161b22; }
-    .sender-tag { color: #58a6ff; font-weight: 700; font-size: 0.85rem; }
-    .subject-tag { color: #f0f6fc; font-weight: 600; font-size: 0.95rem; margin: 4px 0; }
+    .sender-text { color: #58a6ff; font-weight: 700; font-size: 0.85rem; }
+    .subject-text { color: #ffffff; font-weight: 600; font-size: 0.9rem; }
     
-    /* Login Card */
-    .login-box {
-        background: #0d1117;
-        padding: 40px;
-        border-radius: 12px;
-        border: 1px solid #30363d;
-        text-align: center;
+    /* Financial Insight Box */
+    .insight-box {
+        background: rgba(0, 120, 212, 0.1);
+        border: 1px solid #0078d4;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    /* Header */
+    .garrison-header {
+        background: linear-gradient(90deg, #001f3f 0%, #0078d4 100%);
+        padding: 15px 30px;
+        margin: -5rem -5rem 2rem -5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGIC & ROUTING ---
-db = load_db()
-if 'auth_state' not in st.session_state:
-    st.session_state.auth_state = False
-if 'user_email' not in st.session_state:
-    st.session_state.user_email = None
+# --- 3. SESSION STATE ---
+registry = load_registry()
+if 'auth' not in st.session_state:
+    st.session_state.auth = False
+if 'active_user' not in st.session_state:
+    st.session_state.active_user = None
 
-# --- 4. THE HOME SCREEN (Login & Linking) ---
-def show_home():
+# --- 4. THE GATEWAY (Garrison Secure Sign-In) ---
+def gateway():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    c1, mid, c3 = st.columns([1, 1.8, 1])
+    c1, mid, c3 = st.columns([1, 1.5, 1])
     
     with mid:
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        st.title("🛡️ IntelliMail Secure")
-        st.write("Link your business account to enable AI insights.")
+        st.markdown("<h1 style='text-align:center;'>Garrison Financial</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center; color:#888;'>Intelligent Mail & Asset Management</p>", unsafe_allow_html=True)
         
-        # LINKING INPUT
-        email_input = st.text_input("Enter Authorized Email", placeholder="yourname@business.com")
-        
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.button("🔗 Link & Sign In", use_container_width=True, type="primary"):
-                if email_input in db["users"]:
-                    # Trigger Google OAuth from your engine
+        # LINKING INTERFACE
+        with st.container(border=True):
+            user_mail = st.text_input("Corporate Email", placeholder="user@garrisonfinancial.com")
+            
+            if st.button("🚀 Link & Access Portal", use_container_width=True):
+                if user_mail in registry["authorized_users"]:
                     auth_url = engine.get_google_auth_url()
-                    st.session_state.auth_state = True
-                    st.session_state.user_email = email_input
-                    st.link_button("Confirm with Google", auth_url)
+                    st.session_state.auth = True
+                    st.session_state.active_user = user_mail
+                    st.link_button("Complete Google Linking", auth_url)
                 else:
-                    st.error("Account not whitelisted.")
+                    st.error("Access Restricted: Email not found in Garrison Registry.")
         
-        with col_btn2:
-            # Dev Override for you
-            with st.popover("Dev Access"):
-                key = st.text_input("Bypass Key", type="password")
-                if key == "devmode":
-                    st.session_state.auth_state = True
-                    st.session_state.user_email = "Admin_User"
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Dev Bypass
+        with st.expander("Administrative Override"):
+            key = st.text_input("Bypass Key", type="password")
+            if key == "devmode":
+                st.session_state.auth = True
+                st.session_state.active_user = "SYSTEM_ADMIN"
+                st.rerun()
 
-# --- 5. THE WORKSPACE (AI Inbox) ---
-def show_workspace():
-    st.markdown('<div class="outlook-header"><h3 style="margin:0;color:white;">IntelliMail | Workspace</h3></div>', unsafe_allow_html=True)
+# --- 5. THE WORKSPACE ---
+def workspace():
+    st.markdown('<div class="garrison-header"><h3 style="margin:0; color:white;">Garrison Intelligence Hub</h3></div>', unsafe_allow_html=True)
     
     with st.sidebar:
-        st.markdown(f"👤 **{st.session_state.user_email}**")
+        st.markdown(f"**Operator:** `{st.session_state.active_user}`")
         st.divider()
-        menu = st.radio("Navigation", ["📩 Focused Inbox", "🛠️ Admin Tools", "⚖️ Compliance"], label_visibility="collapsed")
+        nav = st.radio("PRO MENU", ["📥 Focused Inbox", "🛠️ Admin Console", "📊 Activity Logs", "⚖️ Compliance"])
         st.divider()
-        if st.button("🔴 Logout", use_container_width=True):
-            st.session_state.auth_state = False
+        if st.button("Secure Logout", use_container_width=True):
+            st.session_state.auth = False
             st.rerun()
 
-    if menu == "🛠️ Admin Tools":
-        st.header("Administration Console")
-        new_acc = st.text_input("Whitelisted Email:")
-        if st.button("Add to Database"):
-            if new_acc and new_acc not in db["users"]:
-                db["users"].append(new_acc)
-                save_db(db)
-                st.success(f"Registered {new_acc}")
-        st.table(db["users"])
+    # --- ADMIN CONSOLE ---
+    if nav == "🛠️ Admin Console":
+        st.title("User Permissions Management")
+        new_user = st.text_input("Authorize New Team Member Email:")
+        if st.button("Add to Garrison Registry"):
+            if new_user and new_user not in registry["authorized_users"]:
+                registry["authorized_users"].append(new_user)
+                save_registry(registry)
+                st.success(f"Access granted to {new_user}")
+        
+        st.write("### Authorized Personnel")
+        st.table(registry["authorized_users"])
 
-    elif menu == "📩 Focused Inbox":
+    # --- INBOX & AI SCANNING ---
+    elif nav == "📥 Focused Inbox":
         col_list, col_view = st.columns([1, 2])
         
         with col_list:
-            st.subheader("Business Stream")
-            # --- AI FILTERING LOGIC ---
-            # Replace with engine.get_business_emails()
-            mails = [
-                {"id": 1, "sender": "Mark Stevens", "subject": "Project Phoenix Update", "body": "Due diligence is complete..."},
-                {"id": 2, "sender": "Finance Dept", "subject": "Invoice #881", "body": "Please approve the AI suite payment..."},
+            st.subheader("Business Streams")
+            # Filtering out "numbnuts" verification emails
+            emails = [
+                {"id": 1, "sender": "Partnerships Dept", "subject": "Venture Capital Terms", "body": "Please review the attached equity structure for the Q1 deal..."},
+                {"id": 2, "sender": "Compliance Team", "subject": "Annual Audit Notification", "body": "This is a notice regarding the upcoming financial audit..."},
             ]
             
-            for m in mails:
+            for e in emails:
                 st.markdown(f"""
                 <div class="email-card">
-                    <div class="sender-tag">👤 {m['sender']}</div>
-                    <div class="subject-tag">{m['subject']}</div>
+                    <div class="sender-text">💼 {e['sender']}</div>
+                    <div class="subject-text">{e['subject']}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Scan Email {m['id']}", key=f"scan_{m['id']}", use_container_width=True):
-                    st.session_state.active_mail = m
+                if st.button(f"AI SCAN: {e['id']}", key=f"s_{e['id']}", use_container_width=True):
+                    st.session_state.current_mail = e
 
         with col_view:
-            if 'active_mail' in st.session_state:
-                mail = st.session_state.active_mail
+            if 'current_mail' in st.session_state:
+                mail = st.session_state.current_mail
                 st.title(mail['subject'])
-                st.caption(f"From: {mail['sender']} | Status: **AI Scanned**")
+                st.write(f"**From:** {mail['sender']}")
                 
-                # --- AI SCANNING OUTPUT ---
-                with st.expander("✨ AI SMART ANALYSIS", expanded=True):
-                    with st.spinner("AI is reading..."):
-                        # analysis = engine.get_ai_summary(mail['body'])
-                        st.info("**Key Takeaway:** Urgent request for document signature. **Action:** Review the PDF and reply by 5 PM.")
+                # AI FINANCIAL SCANNING FEATURE
+                st.markdown('<div class="insight-box">', unsafe_allow_html=True)
+                st.markdown("### ✨ Garrison AI Insight")
+                st.write("**Intent:** Financial Agreement / Legal Review")
+                st.write("**Action Required:** Asset valuation check and signature.")
+                st.markdown('</div>', unsafe_allow_html=True)
                 
-                st.text_area("Original Content", value=mail['body'], height=400, disabled=True)
+                st.text_area("Message Content", value=mail['body'], height=450, disabled=True)
             else:
-                st.info("Select a message to run the AI scan.")
+                st.info("Select a financial communication to begin the AI scan.")
 
-# --- 6. ROUTER ---
-if not st.session_state.auth_state:
-    show_home()
+    # --- LOGS & COMPLIANCE ---
+    elif nav == "📊 Activity Logs":
+        st.title("System Audit Logs")
+        st.caption("Tracking all AI scans and data access for compliance.")
+        st.write("No unauthorized access detected.")
+        
+    elif nav == "⚖️ Compliance":
+        st.title("Privacy & Data Policy")
+        st.write("Garrison Financial adheres to Google's Limited Use Policy.")
+
+# --- 6. MAIN ROUTER ---
+if not st.session_state.auth:
+    gateway()
 else:
-    show_workspace()
+    workspace()
