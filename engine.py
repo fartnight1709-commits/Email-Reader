@@ -8,7 +8,7 @@ def get_google_auth_url():
     """Generates the professional 'Sign in with Google' link."""
     client_id = st.secrets["GOOGLE_CLIENT_ID"]
     # This must match exactly what you put in Google Cloud Console
-    redirect_uri = "https://emailreads.streamlit.app" 
+    redirect_uri = "https://intellimail.streamlit.app/" 
     scope = "https://www.googleapis.com/auth/gmail.readonly"
     
     auth_url = (
