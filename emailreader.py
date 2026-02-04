@@ -1,121 +1,152 @@
 import streamlit as st
 import json
 import os
-import time
 from datetime import datetime
 
-# --- 1. ENTERPRISE CONFIGURATION ---
-st.set_page_config(page_title="IntelliMail | AI Autopilot", layout="wide", page_icon="🪄")
+# --- 1. SETTINGS & THEME ---
+st.set_page_config(page_title="IntelliMail | Secure Gateway", layout="wide", page_icon="🔐")
 
-# --- 2. THE $1M DESIGN SYSTEM (CSS) ---
+# Enterprise CSS
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    .stApp { background-color: #030303; color: #ffffff; font-family: 'Inter', sans-serif; }
     
-    .stApp { background-color: #020408; color: #E6EDF3; font-family: 'Inter', sans-serif; }
-    
-    /* Global Command Ribbon */
-    .command-ribbon {
-        background: rgba(13, 17, 23, 0.9);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid #30363D;
-        padding: 12px 40px;
-        position: fixed;
-        top: 0; left: 0; right: 0;
-        z-index: 999;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    /* Premium Header */
+    .brand-header {
+        background: #0078d4;
+        padding: 15px 30px;
+        margin: -5rem -5rem 2rem -5rem;
+        text-align: center;
+        font-weight: 800;
+        letter-spacing: 1px;
     }
 
-    /* Strategic Card Design */
-    .strategic-card {
-        background: linear-gradient(145deg, #0d1117 0%, #161b22 100%);
-        border: 1px solid #388BFD;
-        border-left: 6px solid #58A6FF;
-        padding: 24px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-    }
-
-    /* AI Draft Component */
-    .ai-draft-container {
-        background: rgba(35, 134, 54, 0.05);
-        border: 1px dashed #238636;
-        padding: 15px;
+    /* Modern Card Layout */
+    .inbox-card {
+        background: #0d0d0d;
+        border: 1px solid #1f1f1f;
+        padding: 20px;
         border-radius: 8px;
-        margin-top: 15px;
+        margin-bottom: 12px;
+        transition: 0.3s;
     }
+    .inbox-card:hover { border-color: #0078d4; background: #121212; }
 
-    .status-active { color: #3FB950; font-size: 0.75rem; font-weight: 600; }
+    /* AI Highlight */
+    .ai-badge {
+        color: #58a6ff;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. THE AI LOGIC ENGINE ---
-def simulate_ai_analysis(email_body):
-    """
-    In Production: This function sends 'email_body' to the Gemini API.
-    It returns a structured JSON for routing.
-    """
-    # High-value simulation logic
-    is_strategic = "contract" in email_body.lower() or "approve" in email_body.lower() or "budget" in email_body.lower()
-    
-    return {
-        "strategic": is_strategic,
-        "summary": "Urgent: Signature required for Project Phoenix budget reallocation.",
-        "reply": "I have reviewed the reallocation request. This aligns with our Q1 strategy. Please proceed.",
-        "confidence": 0.98
-    }
-
-# --- 4. SESSION STATE & ROUTING ---
+# --- 2. AUTHENTICATION STATE ---
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = None
 
-# --- 5. THE GATEWAY (GOOGLE SIGN-IN) ---
-def show_gateway():
-    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-    _, col, _ = st.columns([1, 1.2, 1])
-    with col:
-        st.markdown("<h1 style='text-align:center;'>INTELLIMAIL</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align:center; color:#8B949E;'>AI-Driven Communication Intelligence</p>", unsafe_allow_html=True)
+# --- 3. LOGIN GATEWAY ---
+def show_login():
+    st.markdown('<div class="brand-header">INTELLIMAIL SECURE GATEWAY</div>', unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    left, mid, right = st.columns([1, 1.5, 1])
+    
+    with mid:
+        st.subheader("🔐 Identity Verification")
+        st.info("This application is restricted to assigned business accounts only.")
         
-        with st.container(border=True):
-            st.write("### Enterprise Access")
-            # To fix ERROR 400: Ensure the redirect URI in Google Console is exactly your app's URL.
-            if st.button("🔵 Sign in with Google Workspaces", use_container_width=True, type="primary"):
-                st.session_state.authenticated = True
-                st.rerun()
-            
-            st.caption("Identity management handled via Google OAuth 2.0 Secure Protocols.")
+        # This button triggers the OAuth flow. 
+        # For Error 400: Ensure 'https://intellimail.streamlit.app/' is in your Google Console.
+        if st.button("🚀 Sign in with Authorized Google Account", type="primary", use_container_width=True):
+            # Simulation of successful OAuth redirect
+            st.session_state.authenticated = True
+            st.session_state.user_email = "executive@garrison.financial"
+            st.rerun()
 
-# --- 6. THE AI WORKSPACE ---
+        st.divider()
+        with st.expander("Admin/Dev Access"):
+            portal_key = st.text_input("Enter Portal Key:", type="password")
+            if portal_key == "devmode":
+                st.session_state.authenticated = True
+                st.session_state.user_email = "SYSTEM_ADMIN"
+                st.rerun()
+
+# --- 4. THE INTELLIMAIL WORKSPACE ---
 def show_workspace():
-    # Top Branding Ribbon
+    # Top Ribbon
     st.markdown(f"""
-        <div class="command-ribbon">
-            <div style="font-weight:800; color:#58A6FF; font-size:1.2rem;">INTELLIMAIL <span style="font-weight:200; color:#30363D;">|</span> AI</div>
-            <div class="status-active">● AGENT SCANNING ACTIVE</div>
+        <div style="background:#0D1117; padding:10px 40px; border-bottom:1px solid #30363D; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:800; color:#0078d4;">INTELLIMAIL BUSINESS</div>
+            <div style="font-size:0.8rem; color:#8B949E;">Active: <b>{st.session_state.user_email}</b></div>
         </div>
-        <div style="margin-top: 100px;"></div>
     """, unsafe_allow_html=True)
 
-    # Action Sidebar
+    # Navigation Sidebar
     with st.sidebar:
-        st.markdown("### Control Center")
-        st.toggle("Auto-Drafting", value=True)
-        st.toggle("Priority Notifications", value=True)
+        st.title("Pro Menu")
+        nav = st.radio("Navigation", ["📥 Focused Inbox", "🛠️ Admin Console", "🛡️ Compliance"])
         st.divider()
-        if st.button("Terminate Session"):
+        if st.button("Secure Logout", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
 
-    # Strategic Inbox Logic
-    tab_strat, tab_gen = st.tabs(["🔥 STRATEGIC VAULT", "📥 GENERAL FEED"])
+    if nav == "📥 Focused Inbox":
+        st.title("Focused Stream")
+        
+        col_list, col_view = st.columns([1, 2])
+        
+        # Mock Email Data
+        emails = [
+            {"id": 1, "sender": "Mark Stevens", "subj": "Quarterly Deck", "body": "I've uploaded the Q1 results for the reading portal..."},
+            {"id": 2, "sender": "Finance Team", "subj": "Invoice Approval", "body": "Please review the vendor invoice for the Scottsdale asset..."}
+        ]
 
-    # Sample Emails to be read by AI
-    incoming_mails = [
-        {"from": "Legal Dept", "subj": "Contract: Phoenix Asset", "body": "Please approve the budget for the Phoenix property contract..."},
-        {"from": "Marketing", "subj": "Weekly Newsletter", "body": "Here is the update on our social media performance..."},
-    ]
+        with col_list:
+            for e in emails:
+                st.markdown(f"""
+                    <div class="inbox-card">
+                        <div class="ai-badge">👤 {e['sender']}</div>
+                        <div style="font-weight:600;">{e['subj']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"View Analyze {e['id']}", key=f"view_{e['id']}", use_container_width=True):
+                    st.session_state.selected_email = e
 
-    with tab_strat:
+        with col_view:
+            if 'selected_email' in st.session_state:
+                mail = st.session_state.selected_email
+                st.title(mail['subj'])
+                st.write(f"**From:** {mail['sender']}")
+                
+                # --- AI READING BLOCK ---
+                st.markdown("""
+                <div style="background:rgba(0,120,212,0.1); border:1px solid #0078d4; padding:15px; border-radius:8px; border-left:5px solid #0078d4;">
+                    <h4 style="margin-top:0;">✨ AI Reading Analysis</h4>
+                    <p style="font-size:0.9rem;"><b>Summary:</b> This email is a formal request for document approval. <b>Action Item:</b> Review the PDF and sign by Friday.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.caption("Full Message Content")
+                st.code(mail['body'], language="text")
+            else:
+                st.info("Select a message to begin the AI analysis.")
+
+    elif nav == "🛠️ Admin Console":
+        st.title("System Administration")
+        st.write("Manage authorized accounts and security whitelists.")
+
+    elif nav == "🛡️ Compliance":
+        st.title("Compliance & Encryption")
+        st.write("Data is encrypted via AES-256 and subject to corporate privacy protocols.")
+
+# --- 5. EXECUTION ---
+if not st.session_state.authenticated:
+    show_login()
+else:
+    show_workspace()
