@@ -1,1 +1,5 @@
 streamlit
+google-auth-oauthlib
+google-api-python-client
+langchain-google-genai
+langchain-core
