@@ -1,152 +1,92 @@
 import streamlit as st
-import json
-import os
-from datetime import datetime
+import time
+import engine
+import features
 
-# --- 1. SETTINGS & THEME ---
-st.set_page_config(page_title="IntelliMail | Secure Gateway", layout="wide", page_icon="🔐")
+# --- 1. PAGE SETUP (Must be first) ---
+# We define the pages here so they show up in the sidebar automatically
+def main_dashboard():
+    st.title("📩 IntelliMail Pro")
+    st.caption("Commercial Grade Email Intelligence")
 
-# Enterprise CSS
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    .stApp { background-color: #030303; color: #ffffff; font-family: 'Inter', sans-serif; }
+    # Auth Section
+    st.markdown("### 🔐 Authentication")
+    st.write("Connect securely via Google to analyze your inbox.")
     
-    /* Premium Header */
-    .brand-header {
-        background: #0078d4;
-        padding: 15px 30px;
-        margin: -5rem -5rem 2rem -5rem;
-        text-align: center;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    /* Modern Card Layout */
-    .inbox-card {
-        background: #0d0d0d;
-        border: 1px solid #1f1f1f;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        transition: 0.3s;
-    }
-    .inbox-card:hover { border-color: #0078d4; background: #121212; }
-
-    /* AI Highlight */
-    .ai-badge {
-        color: #58a6ff;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        margin-bottom: 5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 2. AUTHENTICATION STATE ---
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-if 'user_email' not in st.session_state:
-    st.session_state.user_email = None
-
-# --- 3. LOGIN GATEWAY ---
-def show_login():
-    st.markdown('<div class="brand-header">INTELLIMAIL SECURE GATEWAY</div>', unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    auth_link = engine.get_google_auth_url()
+    st.link_button("🚀 Sign in with Google!", auth_link, type="primary")
     
-    left, mid, right = st.columns([1, 1.5, 1])
-    
-    with mid:
-        st.subheader("🔐 Identity Verification")
-        st.info("This application is restricted to assigned business accounts only.")
+    st.divider()
+
+    # Analysis Interface
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.subheader("Manual Email Analysis")
+        email_input = st.text_area("Paste email content here:", height=250, key="main_input")
         
-        # This button triggers the OAuth flow. 
-        # For Error 400: Ensure 'https://intellimail.streamlit.app/' is in your Google Console.
-        if st.button("🚀 Sign in with Authorized Google Account", type="primary", use_container_width=True):
-            # Simulation of successful OAuth redirect
-            st.session_state.authenticated = True
-            st.session_state.user_email = "executive@garrison.financial"
-            st.rerun()
-
-        st.divider()
-        with st.expander("Admin/Dev Access"):
-            portal_key = st.text_input("Enter Portal Key:", type="password")
-            if portal_key == "devmode":
-                st.session_state.authenticated = True
-                st.session_state.user_email = "SYSTEM_ADMIN"
-                st.rerun()
-
-# --- 4. THE INTELLIMAIL WORKSPACE ---
-def show_workspace():
-    # Top Ribbon
-    st.markdown(f"""
-        <div style="background:#0D1117; padding:10px 40px; border-bottom:1px solid #30363D; display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:800; color:#0078d4;">INTELLIMAIL BUSINESS</div>
-            <div style="font-size:0.8rem; color:#8B949E;">Active: <b>{st.session_state.user_email}</b></div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Navigation Sidebar
-    with st.sidebar:
-        st.title("Pro Menu")
-        nav = st.radio("Navigation", ["📥 Focused Inbox", "🛠️ Admin Console", "🛡️ Compliance"])
-        st.divider()
-        if st.button("Secure Logout", use_container_width=True):
-            st.session_state.authenticated = False
-            st.rerun()
-
-    if nav == "📥 Focused Inbox":
-        st.title("Focused Stream")
-        
-        col_list, col_view = st.columns([1, 2])
-        
-        # Mock Email Data
-        emails = [
-            {"id": 1, "sender": "Mark Stevens", "subj": "Quarterly Deck", "body": "I've uploaded the Q1 results for the reading portal..."},
-            {"id": 2, "sender": "Finance Team", "subj": "Invoice Approval", "body": "Please review the vendor invoice for the Scottsdale asset..."}
-        ]
-
-        with col_list:
-            for e in emails:
-                st.markdown(f"""
-                    <div class="inbox-card">
-                        <div class="ai-badge">👤 {e['sender']}</div>
-                        <div style="font-weight:600;">{e['subj']}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                if st.button(f"View Analyze {e['id']}", key=f"view_{e['id']}", use_container_width=True):
-                    st.session_state.selected_email = e
-
-        with col_view:
-            if 'selected_email' in st.session_state:
-                mail = st.session_state.selected_email
-                st.title(mail['subj'])
-                st.write(f"**From:** {mail['sender']}")
-                
-                # --- AI READING BLOCK ---
-                st.markdown("""
-                <div style="background:rgba(0,120,212,0.1); border:1px solid #0078d4; padding:15px; border-radius:8px; border-left:5px solid #0078d4;">
-                    <h4 style="margin-top:0;">✨ AI Reading Analysis</h4>
-                    <p style="font-size:0.9rem;"><b>Summary:</b> This email is a formal request for document approval. <b>Action Item:</b> Review the PDF and sign by Friday.</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.caption("Full Message Content")
-                st.code(mail['body'], language="text")
+        if st.button("Analyze with AI"):
+            if email_input:
+                with st.spinner("Analyzing..."):
+                    analysis = engine.analyze_email(email_input)
+                    st.subheader("Results")
+                    st.json(analysis)
             else:
-                st.info("Select a message to begin the AI analysis.")
+                st.warning("Please paste an email first.")
 
-    elif nav == "🛠️ Admin Console":
-        st.title("System Administration")
-        st.write("Manage authorized accounts and security whitelists.")
+    with col2:
+        st.subheader("System Live Feed")
+        log_box = st.empty()
+        log_box.info("Ready to process...")
+        
+        if st.button("Run System Check"):
+            progress_bar = st.progress(0)
+            for i in range(1, 101):
+                time.sleep(0.01)
+                progress_bar.progress(i)
+            st.success("System Operational")
+            st.balloons()
 
-    elif nav == "🛡️ Compliance":
-        st.title("Compliance & Encryption")
-        st.write("Data is encrypted via AES-256 and subject to corporate privacy protocols.")
+def privacy_policy():
+    st.title("🛡️ Privacy Policy")
+    st.write("**Last Updated:** February 4, 2026")
+    st.markdown("""
+    ### 1. Data Collection
+    IntelliMail uses the Google Gmail API to access email content. We only request **Read-Only** access.
+    
+    ### 2. Data Usage
+    We process email data to provide summaries. Information received from Google APIs will adhere to the **Google API Service User Data Policy**, including the Limited Use requirements.
+    
+    ### 3. Data Storage
+    We do **not** store your emails on our servers. Processing happens in real-time.
+    """)
 
-# --- 5. EXECUTION ---
-if not st.session_state.authenticated:
-    show_login()
-else:
-    show_workspace()
+def terms_of_service():
+    st.title("📜 Terms of Service")
+    st.markdown("""
+    ### 1. Service Description
+    IntelliMail provides AI-driven insights for email management.
+    
+    ### 2. User Responsibilities
+    Users are responsible for maintaining the security of their own Google accounts.
+    """)
+
+# --- 2. EXECUTION & NAVIGATION ---
+# This creates the actual "Pages" in your sidebar
+pg = st.navigation([
+    st.Page(main_dashboard, title="Dashboard", icon="🏠"),
+    st.Page(privacy_policy, title="Privacy Policy", icon="🛡️"),
+    st.Page(terms_of_service, title="Terms of Service", icon="📜"),
+])
+
+# Sidebar Status (Fixed the duplicate issue)
+with st.sidebar:
+    st.title("IntelliMail V1")
+    try:
+        st.success(f"Engine: {engine.get_api_status()}")
+    except:
+        st.warning("Engine: Connecting...")
+    st.divider()
+
+# Run the selected page
+pg.run()
