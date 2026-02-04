@@ -1,176 +1,172 @@
 import streamlit as st
 import json
 import os
-import engine # Your AI/Google Logic
-from datetime import datetime
+import engine # Ensure engine.py handles your Google OAuth and AI calls
 
-# --- 1. PERSISTENT STORAGE ENGINE ---
-DB_FILE = "user_registry.json"
+# --- 1. PERSISTENCE & STYLING ---
+DB_FILE = "user_db.json"
 
-def load_registry():
-    """Loads the whitelist and registered users from disk."""
+def load_db():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f:
-            return json.load(f)
-    # Default admin if no file exists
-    return {"assigned_emails": ["dev@intellimail.ai"], "logged_in_history": []}
+        with open(DB_FILE, "r") as f: return json.load(f)
+    return {"users": ["dev@intellimail.ai"]}
 
-def save_registry(data):
-    """Saves the whitelist to disk."""
-    with open(DB_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+def save_db(data):
+    with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
 
-# Load data at start
-registry = load_registry()
+st.set_page_config(page_title="IntelliMail Pro", layout="wide")
 
-# --- 2. ULTRA-SLIM DARK UI ---
-st.set_page_config(page_title="IntelliMail AI", layout="wide", initial_sidebar_state="expanded")
-
+# --- 2. HIGH-END OLED CSS ---
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: #e0e0e0; }
-    [data-testid="stSidebar"] { background-color: #0a0a0a !important; border-right: 1px solid #1f1f1f; }
+    /* Ultra Dark Background */
+    .stApp { background-color: #050608; color: #e1e1e1; }
     
-    /* Slim Outlook Cards */
-    .email-row {
-        padding: 12px;
-        background-color: #0d1117;
-        border: 1px solid #21262d;
-        border-left: 4px solid transparent;
-        border-radius: 6px;
-        margin-bottom: 8px;
+    /* Slim Sidebar */
+    [data-testid="stSidebar"] { 
+        background-color: #0b0d11 !important; 
+        border-right: 1px solid #1f232a; 
     }
-    .email-row:hover { border-left: 4px solid #58a6ff; background-color: #161b22; }
-    .sender-label { color: #58a6ff; font-weight: 800; font-size: 0.85rem; }
-    .subject-label { font-weight: 600; color: #f0f6fc; font-size: 0.95rem; }
-    
-    /* Top Navigation Bar */
-    .outlook-bar {
-        background-color: #0078d4;
-        padding: 10px 25px;
+
+    /* Outlook Blue Ribbon */
+    .outlook-header {
+        background: #0078d4;
+        padding: 12px 24px;
         margin: -5rem -5rem 1rem -5rem;
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: 600;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    /* Glassmorphism Cards */
+    .email-card {
+        background: #111418;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #21262d;
+        margin-bottom: 10px;
+        transition: 0.2s;
+    }
+    .email-card:hover { border-color: #58a6ff; background: #161b22; }
+    .sender-tag { color: #58a6ff; font-weight: 700; font-size: 0.85rem; }
+    .subject-tag { color: #f0f6fc; font-weight: 600; font-size: 0.95rem; margin: 4px 0; }
+    
+    /* Login Card */
+    .login-box {
+        background: #0d1117;
+        padding: 40px;
+        border-radius: 12px;
+        border: 1px solid #30363d;
+        text-align: center;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION STATE ---
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-if 'current_user' not in st.session_state:
-    st.session_state.current_user = None
+# --- 3. LOGIC & ROUTING ---
+db = load_db()
+if 'auth_state' not in st.session_state:
+    st.session_state.auth_state = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = None
 
-# --- 4. SIGN-IN & REGISTRATION (The Gateway) ---
-def show_login():
+# --- 4. THE HOME SCREEN (Login & Linking) ---
+def show_home():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    c1, col, c3 = st.columns([1, 1.8, 1])
+    c1, mid, c3 = st.columns([1, 1.8, 1])
     
-    with col:
-        st.markdown("<h2 style='text-align:center;'>🔐 IntelliMail Gateway</h2>", unsafe_allow_html=True)
+    with mid:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        st.title("🛡️ IntelliMail Secure")
+        st.write("Link your business account to enable AI insights.")
         
-        tab_login, tab_reg = st.tabs(["Sign In", "Admin Bypass"])
+        # LINKING INPUT
+        email_input = st.text_input("Enter Authorized Email", placeholder="yourname@business.com")
         
-        with tab_login:
-            user_email = st.text_input("Enter your Assigned Business Email", placeholder="name@company.com")
-            if st.button("Link & Authorize Gmail", use_container_width=True):
-                if user_email in registry["assigned_emails"]:
-                    # Proceed to actual Google OAuth
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🔗 Link & Sign In", use_container_width=True, type="primary"):
+                if email_input in db["users"]:
+                    # Trigger Google OAuth from your engine
                     auth_url = engine.get_google_auth_url()
-                    st.session_state.authenticated = True
-                    st.session_state.current_user = user_email
-                    
-                    # Store login event in DB
-                    registry["logged_in_history"].append({
-                        "email": user_email, 
-                        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-                    })
-                    save_registry(registry)
-                    
-                    st.link_button("Confirm Google Connection", auth_url)
-                    st.rerun()
+                    st.session_state.auth_state = True
+                    st.session_state.user_email = email_input
+                    st.link_button("Confirm with Google", auth_url)
                 else:
-                    st.error("This email is not on the authorized list. Please contact your administrator.")
+                    st.error("Account not whitelisted.")
+        
+        with col_btn2:
+            # Dev Override for you
+            with st.popover("Dev Access"):
+                key = st.text_input("Bypass Key", type="password")
+                if key == "devmode":
+                    st.session_state.auth_state = True
+                    st.session_state.user_email = "Admin_User"
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with tab_reg:
-            st.info("Direct Administration Access")
-            master_key = st.text_input("Portal Master Key", type="password")
-            if master_key == "devmode":
-                st.session_state.authenticated = True
-                st.session_state.current_user = "MASTER_ADMIN"
-                st.rerun()
-
-# --- 5. THE AI WORKSPACE ---
+# --- 5. THE WORKSPACE (AI Inbox) ---
 def show_workspace():
-    st.markdown('<div class="outlook-bar">IntelliMail Business | Workplace</div>', unsafe_allow_html=True)
+    st.markdown('<div class="outlook-header"><h3 style="margin:0;color:white;">IntelliMail | Workspace</h3></div>', unsafe_allow_html=True)
     
     with st.sidebar:
-        st.markdown(f"**Active:** `{st.session_state.current_user}`")
+        st.markdown(f"👤 **{st.session_state.user_email}**")
         st.divider()
-        nav = st.radio("Navigate", ["📩 Inbox", "🛠️ Admin Console", "🛡️ Compliance"], label_visibility="collapsed")
+        menu = st.radio("Navigation", ["📩 Focused Inbox", "🛠️ Admin Tools", "⚖️ Compliance"], label_visibility="collapsed")
         st.divider()
-        if st.button("Logout", use_container_width=True):
-            st.session_state.authenticated = False
+        if st.button("🔴 Logout", use_container_width=True):
+            st.session_state.auth_state = False
             st.rerun()
 
-    # --- ADMIN CONSOLE FEATURE ---
-    if nav == "🛠️ Admin Console":
-        st.title("User Administration")
-        st.write("Authorize new emails to use the AI Reading service.")
-        
-        new_acc = st.text_input("New Business Email to Assign:")
-        if st.button("Save to Database"):
-            if new_acc and new_acc not in registry["assigned_emails"]:
-                registry["assigned_emails"].append(new_acc)
-                save_registry(registry)
-                st.success(f"Permitted: {new_acc}")
-        
-        st.divider()
-        st.subheader("Stored User Database")
-        st.table(registry["assigned_emails"])
+    if menu == "🛠️ Admin Tools":
+        st.header("Administration Console")
+        new_acc = st.text_input("Whitelisted Email:")
+        if st.button("Add to Database"):
+            if new_acc and new_acc not in db["users"]:
+                db["users"].append(new_acc)
+                save_db(db)
+                st.success(f"Registered {new_acc}")
+        st.table(db["users"])
 
-    # --- INBOX & AI READING FEATURE ---
-    elif nav == "📩 Inbox":
+    elif menu == "📩 Focused Inbox":
         col_list, col_view = st.columns([1, 2])
         
         with col_list:
-            st.subheader("Focused Stream")
-            # This is where your filtered engine.get_business_emails() would go
-            mock_emails = [
-                {"id": 1, "sender": "Mark Stevens", "subject": "Quarterly Deck", "body": "I've uploaded the Q1 results for the reading portal..."},
-                {"id": 2, "sender": "Finance Team", "subject": "Invoice Approval", "body": "Please approve the vendor invoice for the AI suite..."},
+            st.subheader("Business Stream")
+            # --- AI FILTERING LOGIC ---
+            # Replace with engine.get_business_emails()
+            mails = [
+                {"id": 1, "sender": "Mark Stevens", "subject": "Project Phoenix Update", "body": "Due diligence is complete..."},
+                {"id": 2, "sender": "Finance Dept", "subject": "Invoice #881", "body": "Please approve the AI suite payment..."},
             ]
             
-            for m in mock_emails:
-                with st.container():
-                    st.markdown(f"""
-                    <div class="email-row">
-                        <div class="sender-label">👤 {m['sender']}</div>
-                        <div class="subject-label">{m['subject']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    if st.button(f"View Analyze {m['id']}", key=f"btn_{m['id']}", use_container_width=True):
-                        st.session_state.active_mail = m
+            for m in mails:
+                st.markdown(f"""
+                <div class="email-card">
+                    <div class="sender-tag">👤 {m['sender']}</div>
+                    <div class="subject-tag">{m['subject']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"Scan Email {m['id']}", key=f"scan_{m['id']}", use_container_width=True):
+                    st.session_state.active_mail = m
 
         with col_view:
             if 'active_mail' in st.session_state:
                 mail = st.session_state.active_mail
                 st.title(mail['subject'])
-                st.write(f"**From:** {mail['sender']}")
+                st.caption(f"From: {mail['sender']} | Status: **AI Scanned**")
                 
-                # --- AI READING COMPONENT ---
-                with st.container():
-                    st.markdown("### ✨ AI Reading Analysis")
-                    with st.spinner("Analyzing intent..."):
-                        # In production, replace with: analysis = engine.analyze(mail['body'])
-                        st.info("**Summary:** This email is a formal request for document approval. **Action Item:** Review the PDF and sign by Friday.")
+                # --- AI SCANNING OUTPUT ---
+                with st.expander("✨ AI SMART ANALYSIS", expanded=True):
+                    with st.spinner("AI is reading..."):
+                        # analysis = engine.get_ai_summary(mail['body'])
+                        st.info("**Key Takeaway:** Urgent request for document signature. **Action:** Review the PDF and reply by 5 PM.")
                 
-                st.text_area("Full Message Content", value=mail['body'], height=450, disabled=True)
+                st.text_area("Original Content", value=mail['body'], height=400, disabled=True)
             else:
-                st.info("Select a business communication to begin AI analysis.")
+                st.info("Select a message to run the AI scan.")
 
 # --- 6. ROUTER ---
-if not st.session_state.authenticated:
-    show_login()
+if not st.session_state.auth_state:
+    show_home()
 else:
     show_workspace()
