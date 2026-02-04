@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List
 from enum import Enum
 
 class PriorityLevel(str, Enum):
@@ -9,7 +9,7 @@ class PriorityLevel(str, Enum):
     LOW = "LOW"
 
 class EmailAnalysis(BaseModel):
-    summary_executive: str = Field(description="1-line summary for high-level overview")
+    summary_executive: str = Field(description="1-line summary")
     summary_detailed: str = Field(description="Bullet points of core facts")
     priority: PriorityLevel
     priority_reasoning: str
@@ -17,11 +17,3 @@ class EmailAnalysis(BaseModel):
     suggested_reply: str
     tone_detected: str
     confidence_score: float
-
-class EmailMetadata(BaseModel):
-    thread_id: str
-    message_id: str
-    sender_email: str
-    recipient_email: str
-    subject: str
-    timestamp: str
