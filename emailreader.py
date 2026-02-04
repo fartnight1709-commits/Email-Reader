@@ -1,5 +1,13 @@
 import streamlit as st
 import time
+import features
+
+st.title("Email AI")
+user_input = st.text_input("Enter Email Content")
+
+if st.button("Run Feature"):
+    response = features.process_email(user_input)
+    st.write(response)
 
 # --- Page Configuration ---
 st.set_page_config(page_title="School Project: AI Email Assistant", layout="wide")
