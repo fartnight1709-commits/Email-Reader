@@ -1,0 +1,91 @@
+import customtkinter as ctk
+import time
+import threading
+
+# --- Appearance Configuration ---
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")  # Changed to green for a 'tech' feel
+
+class StudentApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        # Window Settings
+        self.title("School Project: AI Assistant UI")
+        self.geometry("900x550")
+
+        # 1. Layout: Sidebar and Main Area
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        # --- SIDEBAR ---
+        self.sidebar = ctk.CTkFrame(self, width=180, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        
+        self.logo = ctk.CTkLabel(self.sidebar, text="PROJECT V1", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo.grid(row=0, column=0, padx=20, pady=30)
+
+        self.btn_home = ctk.CTkButton(self.sidebar, text="Home", command=lambda: self.change_tab("Home"))
+        self.btn_home.grid(row=1, column=0, padx=20, pady=10)
+
+        self.btn_logs = ctk.CTkButton(self.sidebar, text="Activity Logs", command=lambda: self.change_tab("Logs"))
+        self.btn_logs.grid(row=2, column=0, padx=20, pady=10)
+
+        # Appearance Switch (Light/Dark)
+        self.appearance_mode_label = ctk.CTkLabel(self.sidebar, text="Appearance Mode:", anchor="w")
+        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(150, 0))
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+
+        # --- MAIN AREA ---
+        self.main_view = ctk.CTkFrame(self, corner_radius=15, fg_color="transparent")
+        self.main_view.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        self.main_view.grid_columnconfigure(0, weight=1)
+
+        # Title
+        self.title_label = ctk.CTkLabel(self.main_view, text="Status: Ready", font=ctk.CTkFont(size=24, weight="bold"))
+        self.title_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+
+        # Text Box (For Logs or Emails)
+        self.output_box = ctk.CTkTextbox(self.main_view, height=250)
+        self.output_box.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.output_box.insert("0.0", "Welcome to the UI. Click 'Start Process' to see the loading bar...")
+
+        # Progress Bar (The Loading Bar)
+        self.progress_bar = ctk.CTkProgressBar(self.main_view)
+        self.progress_bar.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+        self.progress_bar.set(0) # Start at 0%
+
+        # Action Button
+        self.action_btn = ctk.CTkButton(self.main_view, text="Start AI Process", command=self.start_loading)
+        self.action_btn.grid(row=3, column=0, padx=20, pady=20)
+
+    # --- FUNCTIONS ---
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+
+    def change_tab(self, name):
+        self.title_label.configure(text=f"View: {name}")
+        self.output_box.insert("end", f"\nSwitched to {name} tab.")
+
+    def start_loading(self):
+        """Starts a background thread so the UI doesn't freeze while loading."""
+        self.action_btn.configure(state="disabled")
+        self.title_label.configure(text="Processing...")
+        threading.Thread(target=self.run_progress, daemon=True).start()
+
+    def run_progress(self):
+        """Simulates a task filling the progress bar."""
+        for i in range(1, 101):
+            time.sleep(0.03) # Simulate work
+            self.progress_bar.set(i / 100)
+            if i % 25 == 0:
+                self.output_box.insert("end", f"\nTask {i}% complete...")
+        
+        self.title_label.configure(text="Process Finished!")
+        self.action_btn.configure(state="normal")
+
+if __name__ == "__main__":
+    app = StudentApp()
+    app.mainloop()
