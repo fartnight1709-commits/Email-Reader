@@ -2,11 +2,23 @@ import streamlit as st
 import time
 import features
 import engine
-st.set_page_config(page_title="EmailAI Pro", layout="centered")
-st.title("EmailAI Pro")
-st.caption("Commercial Grade Email Intelligence")
+st.set_page_config(page_title="IntelliMail", layout="centered")
+st.title("IntelliMail")
+st.caption("IntelliMail, where AI meets the workplace.")
 
 email_input = st.text_area("Paste the email content here:", height=200)
+
+st.sidebar.title("System Status")
+st.sidebar.write(f"Engine: {engine.get_api_status()}")
+
+st.write("To begin analyzing your emails, please connect your account securely via Google.")
+
+auth_link = engine.get_google_auth_url()
+
+st.link_button("🚀Sign in with Google!", auth_link, type ="primary")
+
+st.divider()
+st.caption("We only request 'Read-Only' access. We will never store your password, or private information.")
 
 if st.button("Analyze with AI"):
     if email_input:
