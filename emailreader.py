@@ -1,16 +1,38 @@
 import streamlit as st
 import time
 import features
+import engine
+st.set_page_config(page_title="EmailAI Pro", layout="centered")
+st.title("EmailAI Pro")
+st.caption("Commercial Grade Email Intelligence")
+
+email_input = st.text_area("Paste the email content here:", height=200)
+
+if st.button("Analyze with AI"):
+    if email_input:
+        with st.spinner("Analyzing"):
+            analysis = engine.analyze_email(email_input)
+
+            st.subheader("Results")
+            st.json(analysis)
+
+            if analysis["length"] > 10:
+                st.success(f"Action: {analysis['suggestion']}")
+    else:
+        st.wraning("Please paste an email first.")
+
+st.sidebar.title("System Status")
+st.sidebar.write(f"Engine: {engine.get_api_status()}")
 
 st.title("Email AI")
 user_input = st.text_input("Enter Email Content")
 
-if st.button("Run Feature"):
+if st.button("Send Email Content!"):
     response = features.process_email(user_input)
     st.write(response)
 
 # --- Page Configuration ---
-st.set_page_config(page_title="School Project: AI Email Assistant", layout="wide")
+st.set_page_config(page_title="Email reader", layout="wide")
 
 # --- SIDEBAR ---
 with st.sidebar:
