@@ -1,151 +1,165 @@
 import streamlit as st
-import engine
-import time
+import json
+import os
+import engine # Your logic for Google/AI
 
-# --- 1. SLIM OUTLOOK CONFIG ---
-st.set_page_config(
-    page_title="IntelliMail | Secure Business",
-    page_icon="📩",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- 1. DATABASE LOGIC (Persistence) ---
+DB_FILE = "user_registry.json"
 
-# --- 2. THE "OLED" DARK THEME ---
+def load_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return {"assigned_emails": ["dev@intellimail.ai"]}
+
+def save_db(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f)
+
+# --- 2. THE ULTIMATE DARK UI ---
+st.set_page_config(page_title="IntelliMail Pro", layout="wide", initial_sidebar_state="expanded")
+
 st.markdown("""
     <style>
-    /* Ultra Dark Background */
-    .stApp { background-color: #0b0b0b; color: #e1e1e1; }
+    /* OLED Background */
+    .stApp { background-color: #050505; color: #ffffff; }
     
-    /* Slim Sidebar Styling */
+    /* Slim Sidebar */
     [data-testid="stSidebar"] {
-        background-color: #111111 !important;
-        border-right: 1px solid #333333;
-        min-width: 200px !important;
-        max-width: 200px !important;
+        background-color: #0a0a0a !important;
+        border-right: 1px solid #1a1a1a;
+        width: 220px !important;
     }
 
-    /* Outlook-Style Email Row (Slim) */
-    .email-row {
-        padding: 10px 15px;
-        border-bottom: 1px solid #222;
-        background-color: #111;
-        cursor: pointer;
-    }
-    .email-row:hover { background-color: #1a1a1a; border-left: 3px solid #0078d4; }
-    .sender { color: #0078d4; font-weight: 700; font-size: 0.85rem; }
-    .subject { color: #ffffff; font-weight: 600; font-size: 0.95rem; display: block; }
-    .preview { color: #888; font-size: 0.8rem; }
-
-    /* Custom Header */
-    .header-ribbon {
-        background-color: #111;
-        border-bottom: 1px solid #333;
-        padding: 10px 25px;
+    /* Outlook Header Ribbon */
+    .outlook-ribbon {
+        background-color: #0078d4;
+        padding: 8px 20px;
         margin: -5rem -5rem 1rem -5rem;
+        font-family: 'Segoe UI', sans-serif;
     }
+
+    /* Slim Email Cards */
+    .email-item {
+        padding: 12px;
+        background-color: #0f0f0f;
+        border: 1px solid #1a1a1a;
+        border-left: 4px solid transparent;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    .email-item:hover { border-left: 4px solid #0078d4; background-color: #161616; }
+    .sender-name { color: #0078d4; font-weight: 700; font-size: 0.85rem; }
+    .email-subject { font-weight: 600; color: #eee; font-size: 0.9rem; margin-top: 2px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGIC & AUTH ---
+# --- 3. SESSION & REGISTRY ---
+db = load_db()
 if 'auth' not in st.session_state:
     st.session_state.auth = False
-if 'user_db' not in st.session_state:
-    st.session_state.user_db = ["admin@intellimail.ai"]
+if 'is_admin' not in st.session_state:
+    st.session_state.is_admin = False
 
-# --- 4. THE GATEWAY (SIGN IN) ---
-if not st.session_state.auth:
+# --- 4. SIGN-IN / ACCOUNT CREATION PAGE ---
+def login_page():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        st.markdown("<h2 style='text-align: center;'>🔒 Secure Workspace</h2>", unsafe_allow_html=True)
-        st.info("Authorized Personnel Only")
+    c1, c2, c3 = st.columns([1, 1.8, 1])
+    
+    with c2:
+        st.markdown("<h2 style='text-align:center;'>📩 Create / Access Account</h2>", unsafe_allow_html=True)
         
-        # Proper OAuth Link
-        auth_url = engine.get_google_auth_url()
-        st.link_button("🔗 Link Authorized Account", auth_url, use_container_width=True)
+        tab1, tab2 = st.tabs(["🔒 Secure Login", "✨ New Registration"])
+        
+        with tab1:
+            st.write("Sign in with your assigned business email.")
+            auth_email = st.text_input("Business Email")
+            if st.button("Link Gmail Account"):
+                if auth_email in db["assigned_emails"]:
+                    # Redirect to your actual Google OAuth flow
+                    auth_url = engine.get_google_auth_url()
+                    st.link_button("Confirm Google Linking", auth_url)
+                    st.session_state.auth = True # Bypass for your testing
+                    st.rerun()
+                else:
+                    st.error("Account not assigned. Contact administrator.")
+
+        with tab2:
+            st.write("Enter your admin bypass key to register a new user.")
+            admin_key = st.text_input("Portal Key", type="password")
+            if admin_key == "devmode":
+                st.session_state.auth = True
+                st.session_state.is_admin = True
+                st.rerun()
+
+# --- 5. THE MAIN OUTLOOK WORKSPACE ---
+def main_workspace():
+    # Top Outlook Ribbon
+    st.markdown('<div class="outlook-ribbon"><b>IntelliMail</b> | Focused Inbox</div>', unsafe_allow_html=True)
+    
+    with st.sidebar:
+        st.button("➕ New Message", use_container_width=True)
+        st.divider()
+        nav = ["📥 Inbox", "🛠️ Admin Console", "⚖️ Legal"]
+        if not st.session_state.is_admin:
+            nav.remove("🛠️ Admin Console")
+        choice = st.radio("Navigation", nav, label_visibility="collapsed")
         
         st.divider()
-        # Admin Bypass for Testing
-        bypass = st.text_input("Portal Key", type="password", placeholder="devmode")
-        if bypass == "devmode":
-            st.session_state.auth = True
+        if st.button("Log Out"):
+            st.session_state.auth = False
             st.rerun()
-    st.stop()
 
-# --- 5. THE WORKSPACE (AFTER LOGIN) ---
-
-# Sidebar Navigation (Slim)
-with st.sidebar:
-    st.markdown("### IntelliMail")
-    st.caption("Active Session")
-    st.divider()
-    nav = st.radio("MENU", ["Inbox", "Admin Console", "Compliance"], label_visibility="collapsed")
-    st.divider()
-    if st.button("Logout", use_container_width=True):
-        st.session_state.auth = False
-        st.rerun()
-
-# --- PAGE: ADMIN CONSOLE ---
-if nav == "Admin Console":
-    st.title("🛠️ Administration")
-    st.write("Grant access to new business entities.")
-    
-    new_user = st.text_input("Account Email:")
-    if st.button("Add Account"):
-        if new_user and new_user not in st.session_state.user_db:
-            st.session_state.user_db.append(new_user)
-            st.success(f"Granted: {new_user}")
-            
-    st.divider()
-    st.write("### Whitelist")
-    for u in st.session_state.user_db:
-        st.code(u)
-
-# --- PAGE: COMPLIANCE ---
-elif nav == "Compliance":
-    st.title("🛡️ Legal & Privacy")
-    st.markdown("""
-    **Privacy Policy**
-    IntelliMail uses Google's `gmail.readonly` scope. No data is shared or stored long-term.
-    
-    **Limited Use**
-    Our app complies with Google's Limited Use requirements.
-    """)
-
-# --- PAGE: INBOX (OUTLOOK DESIGN) ---
-else:
-    st.markdown('<div class="header-ribbon"><h4>Focused Inbox</h4></div>', unsafe_allow_html=True)
-    
-    col_list, col_view = st.columns([1, 2.5])
-    
-    with col_list:
-        # Business Filtered Data
-        emails = [
-            {"id": 1, "sender": "Mark Stevens", "subject": "Project Phoenix Update", "body": "The due diligence is complete. We are ready to move forward..."},
-            {"id": 2, "sender": "Legal Team", "subject": "Urgent: Signature Required", "body": "Please review the attached contract for the Scottsdale property..."},
-        ]
+    if choice == "🛠️ Admin Console":
+        st.title("Admin Administration")
+        new_mail = st.text_input("Whitelisted Email:")
+        if st.button("Register Account"):
+            if new_mail and new_mail not in db["assigned_emails"]:
+                db["assigned_emails"].append(new_mail)
+                save_db(db)
+                st.success(f"Added {new_mail} to database.")
         
-        for e in emails:
-            with st.container():
-                st.markdown(f"""
-                <div class="email-row">
-                    <div class="sender">👤 {e['sender']}</div>
-                    <div class="subject">{e['subject']}</div>
-                    <div class="preview">{e['body'][:50]}...</div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button(f"Open: {e['id']}", key=f"e_{e['id']}", use_container_width=True):
-                    st.session_state.active_mail = e
+        st.write("### Currently Assigned")
+        st.table(db["assigned_emails"])
 
-    with col_view:
-        if 'active_mail' in st.session_state:
-            mail = st.session_state.active_mail
-            st.markdown(f"## {mail['subject']}")
-            st.caption(f"From: {mail['sender']} | Business Intelligence: **High Priority**")
-            
-            with st.expander("✨ AI SMART SUMMARY", expanded=True):
-                st.write("This email requires immediate attention regarding the **Project Phoenix** contract signatures.")
-            
-            st.text_area("Content", value=mail['body'], height=500, disabled=True)
-        else:
-            st.info("Select a message to view analytics.")
+    elif choice == "⚖️ Legal":
+        st.title("Compliance & Security")
+        st.info("We adhere to Google's Limited Use Policy. Your data is never stored.")
+
+    else: # INBOX VIEW
+        col_list, col_view = st.columns([1, 2])
+        
+        with col_list:
+            st.subheader("Focused")
+            # Example Emails
+            mails = [
+                {"id": 1, "from": "John (Legal)", "sub": "Service Agreement", "body": "Please review the signature line..."},
+                {"id": 2, "from": "Sarah (HR)", "sub": "Q1 Performance", "body": "The metrics for the quarter are in..."},
+            ]
+            for m in mails:
+                with st.container():
+                    st.markdown(f"""
+                    <div class="email-item">
+                        <div class="sender-name">{m['from']}</div>
+                        <div class="email-subject">{m['sub']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button(f"View {m['id']}", key=f"v_{m['id']}", use_container_width=True):
+                        st.session_state.view_mail = m
+
+        with col_view:
+            if 'view_mail' in st.session_state:
+                m = st.session_state.view_mail
+                st.markdown(f"### {m['sub']}")
+                st.caption(f"From: {m['from']}")
+                st.divider()
+                st.info("✨ **AI Summary:** Signature required on page 4 of document.")
+                st.text_area("Content", value=m['body'], height=400, disabled=True)
+            else:
+                st.info("Select a business communication to start.")
+
+# --- 6. ROUTING ---
+if not st.session_state.auth:
+    login_page()
+else:
+    main_workspace()
