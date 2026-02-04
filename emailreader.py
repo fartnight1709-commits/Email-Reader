@@ -1,92 +1,63 @@
 import streamlit as st
+import os
 import time
-import engine
-import features
+from engine import IntelliMailEngine
 
-# --- 1. PAGE SETUP (Must be first) ---
-# We define the pages here so they show up in the sidebar automatically
-def main_dashboard():
-    st.title("📩 IntelliMail Pro")
-    st.caption("Commercial Grade Email Intelligence")
+# --- 1. SESSION STATE SAFETY (Fixes KeyErrors) ---
+if 'auth_active' not in st.session_state:
+    st.session_state.auth_active = False
+if 'user_list' not in st.session_state:
+    st.session_state.user_list = []
+if 'logged_in_history' not in st.session_state:
+    st.session_state.logged_in_history = []
+if 'users' not in st.session_state:
+    st.session_state.users = {}
 
-    # Auth Section
-    st.markdown("### 🔐 Authentication")
-    st.write("Connect securely via Google to analyze your inbox.")
+# --- 2. LAYOUT HELPER (Fixes v_spacer error) ---
+def v_spacer(height):
+    for _ in range(height // 20):
+        st.write("")
+
+# --- 3. THE WORKSPACE ---
+def show_workspace():
+    st.title("📩 Intelligence Stream")
     
-    auth_link = engine.get_google_auth_url()
-    st.link_button("🚀 Sign in with Google!", auth_link, type="primary")
-    
-    st.divider()
-
-    # Analysis Interface
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.subheader("Manual Email Analysis")
-        email_input = st.text_area("Paste email content here:", height=250, key="main_input")
+    # Corrected Sidebar
+    with st.sidebar:
+        st.header("DASHBOARD")
+        nav = st.radio("Navigation", ["Intelligence Stream", "Regulatory Settings"])
         
-        if st.button("Analyze with AI"):
-            if email_input:
-                with st.spinner("Analyzing..."):
-                    analysis = engine.analyze_email(email_input)
-                    st.subheader("Results")
-                    st.json(analysis)
-            else:
-                st.warning("Please paste an email first.")
+        v_spacer(100) # Manual spacer instead of st.v_spacer
+        st.divider()
+        if st.button("Terminate Session"):
+            st.session_state.auth_active = False
+            st.rerun()
 
-    with col2:
-        st.subheader("System Live Feed")
-        log_box = st.empty()
-        log_box.info("Ready to process...")
-        
-        if st.button("Run System Check"):
-            progress_bar = st.progress(0)
-            for i in range(1, 101):
-                time.sleep(0.01)
-                progress_bar.progress(i)
-            st.success("System Operational")
-            st.balloons()
-
-def privacy_policy():
-    st.title("🛡️ Privacy Policy")
-    st.write("**Last Updated:** February 4, 2026")
-    st.markdown("""
-    ### 1. Data Collection
-    IntelliMail uses the Google Gmail API to access email content. We only request **Read-Only** access.
+    # Main Area Logic
+    col_list, col_view = st.columns([1, 2])
     
-    ### 2. Data Usage
-    We process email data to provide summaries. Information received from Google APIs will adhere to the **Google API Service User Data Policy**, including the Limited Use requirements.
-    
-    ### 3. Data Storage
-    We do **not** store your emails on our servers. Processing happens in real-time.
-    """)
+    business_emails = [
+        {"sender": "John Doe", "subject": "Quarterly Review", "body": "Please find the review attached..."},
+        {"sender": "Sarah Miller", "subject": "Onboarding", "body": "Welcome to the team!"}
+    ]
 
-def terms_of_service():
-    st.title("📜 Terms of Service")
-    st.markdown("""
-    ### 1. Service Description
-    IntelliMail provides AI-driven insights for email management.
-    
-    ### 2. User Responsibilities
-    Users are responsible for maintaining the security of their own Google accounts.
-    """)
+    with col_list:
+        for i, mail in enumerate(business_emails):
+            with st.container(border=True):
+                st.markdown(f"**{mail['sender']}**")
+                st.caption(mail['subject'])
+                # Removed 'label_visibility' to fix TypeError
+                if st.button(f"Analyze", key=f"btn_{i}"):
+                    st.session_state.current_mail = mail
 
-# --- 2. EXECUTION & NAVIGATION ---
-# This creates the actual "Pages" in your sidebar
-pg = st.navigation([
-    st.Page(main_dashboard, title="Dashboard", icon="🏠"),
-    st.Page(privacy_policy, title="Privacy Policy", icon="🛡️"),
-    st.Page(terms_of_service, title="Terms of Service", icon="📜"),
-])
+def show_gateway():
+    st.title("🔐 IntelliMail Gateway")
+    if st.button("Sign in with Garrison Financial SSO", type="primary"):
+        st.session_state.auth_active = True
+        st.rerun()
 
-# Sidebar Status (Fixed the duplicate issue)
-with st.sidebar:
-    st.title("IntelliMail V1")
-    try:
-        st.success(f"Engine: {engine.get_api_status()}")
-    except:
-        st.warning("Engine: Connecting...")
-    st.divider()
-
-# Run the selected page
-pg.run()
+# --- 4. ROUTER ---
+if not st.session_state.auth_active:
+    show_gateway()
+else:
+    show_workspace()
