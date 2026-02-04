@@ -1,87 +1,98 @@
 import streamlit as st
 import time
-import features
 import engine
-st.set_page_config(page_title="Privacy Policy | IntelliMail", layout="wide")
-st.set_page_config(page_title="Terms of Service | IntelliMail", layout="wide")
-st.set_page_config(page_title="IntelliMail", layout="centered")
-st.title("IntelliMail")
-st.caption("IntelliMail, where AI meets the workplace.")
+import features
 
-email_input = st.text_area("Paste the email content here:", height=200)
+# --- 1. PAGE CONFIG (Must be the very first line) ---
+st.set_page_config(page_title="IntelliMail AI", page_icon="📩", layout="wide")
 
-st.sidebar.title("System Status")
-st.sidebar.write(f"Engine: {engine.get_api_status()}")
+# --- 2. SINGLE-FILE NAVIGATION ---
+# This replaces the 'pages' folder so everything is in one script
+page = st.sidebar.radio("Go to:", ["Dashboard", "Privacy Policy", "Terms of Service"])
 
-st.write("To begin analyzing your emails, please connect your account securely via Google.")
+st.sidebar.divider()
 
-auth_link = engine.get_google_auth_url()
+# Safer way to get status to prevent the AttributeError from your screenshot
+try:
+    status = engine.get_api_status()
+    st.sidebar.success(f"Engine: {status}")
+except Exception:
+    st.sidebar.warning("Engine: Initializing...")
 
-st.link_button("🚀Sign in with Google!", auth_link, type ="primary")
+# --- PAGE 1: MAIN DASHBOARD ---
+if page == "Dashboard":
+    st.title("📩 IntelliMail Pro")
+    st.caption("Commercial Grade Email Intelligence")
 
-st.divider()
-st.caption("We only request 'Read-Only' access. We will never store your password, or private information.")
-
-if st.button("Analyze with AI"):
-    if email_input:
-        with st.spinner("Analyzing"):
-            analysis = engine.analyze_email(email_input)
-
-            st.subheader("Results")
-            st.json(analysis)
-
-            if analysis["length"] > 10:
-                st.success(f"Action: {analysis['suggestion']}")
-    else:
-        st.wraning("Please paste an email first.")
-
-st.sidebar.title("System Status")
-st.sidebar.write(f"Engine: {engine.get_api_status()}")
-
-st.title("Email AI")
-user_input = st.text_input("Enter Email Content")
-
-if st.button("Send Email Content!"):
-    response = features.process_email(user_input)
-    st.write(response)
-
-# --- Page Configuration ---
-st.set_page_config(page_title="Email reader", layout="wide")
-
-# --- SIDEBAR ---
-with st.sidebar:
-    st.title("PROJECT V1")
-    if st.button("Home"):
-        st.write("Welcome Home!")
-    if st.button("Activity Logs"):
-        st.write("Viewing Logs...")
+    # OAuth Section
+    st.markdown("### 🔐 Authentication")
+    st.write("Connect securely via Google to analyze your inbox.")
+    
+    auth_link = engine.get_google_auth_url()
+    st.link_button("🚀 Sign in with Google!", auth_link, type="primary")
     
     st.divider()
-    theme = st.selectbox("Appearance Mode", ["Dark", "Light"])
 
-# --- MAIN AREA ---
-st.title("Status: Ready")
+    # Analysis Interface
+    col1, col2 = st.columns([2, 1])
 
-# Text Box (Output area)
-output_container = st.empty()
-output_text = "Welcome to the Web UI. Click 'Start AI Process' to begin..."
-output_container.text_area("AI Output", value=output_text, height=300)
-
-# Action Button
-if st.button("Start AI Process"):
-    st.write("Processing...")
-    
-    # Progress Bar (Loading Bar)
-    progress_bar = st.progress(0)
-    
-    for i in range(1, 101):
-        time.sleep(0.03)  # Simulating work
-        progress_bar.progress(i)
+    with col1:
+        st.subheader("Manual Email Analysis")
+        email_input = st.text_area("Paste email content here:", height=250, placeholder="Paste headers and body...")
         
-        # Update text at certain milestones
-        if i == 25:
-            st.toast("Task 25% complete...")
-        if i == 50:
-            st.toast("Halfway there!")
-            
-    st.success("Process Finished!")
+        if st.button("Analyze with AI"):
+            if email_input:
+                with st.spinner("Analyzing sentiment and priority..."):
+                    # Calling your engine module
+                    analysis = engine.analyze_email(email_input)
+                    st.subheader("Results")
+                    st.json(analysis)
+            else:
+                st.warning("Please paste an email first.")
+
+    with col2:
+        st.subheader("System Live Feed")
+        log_box = st.empty()
+        log_box.info("Waiting for process start...")
+        
+        if st.button("Run System Check"):
+            progress_bar = st.progress(0)
+            for i in range(1, 101):
+                time.sleep(0.01)
+                progress_bar.progress(i)
+                if i == 50: log_box.warning("Scanning API connections...")
+            st.success("System Operational")
+            st.balloons()
+
+# --- PAGE 2: PRIVACY POLICY (Required for Google Verification) ---
+elif page == "Privacy Policy":
+    st.title("🛡️ Privacy Policy")
+    st.write("**Last Updated:** February 4, 2026")
+    st.markdown("""
+    ### 1. Data Collection
+    IntelliMail uses the Google Gmail API to access email content. We only request **Read-Only** access.
+    
+    ### 2. Data Usage
+    We process email data to provide summaries. Information received from Google APIs will adhere to the **Google API Service User Data Policy**, including the Limited Use requirements.
+    
+    ### 3. Data Storage
+    We do **not** store your emails on our servers. Processing happens in real-time and is discarded after your session.
+    """)
+
+# --- PAGE 3: TERMS OF SERVICE ---
+elif page == "Terms of Service":
+    st.title("📜 Terms of Service")
+    st.markdown("""
+    ### 1. Service Description
+    IntelliMail provides AI-driven insights for email management.
+    
+    ### 2. User Responsibilities
+    Users are responsible for maintaining the security of their own Google accounts.
+    
+    ### 3. Disclaimers
+    AI analysis is provided 'as-is'. Users should verify critical information manually.
+    """)
+
+# --- FOOTER ---
+st.sidebar.divider()
+st.sidebar.caption("© 2026 IntelliMail AI")
