@@ -8,7 +8,7 @@ from models import EmailAnalysis, Category
 
 class IntelliMailEngine:
     def __init__(self):
-        """Initializes the engine using secure secrets."""
+        """Initializes engine with fixed Gemini model paths."""
         self.api_key = st.secrets.get("GOOGLE_API_KEY")
         self.client_id = st.secrets.get("GOOGLE_CLIENT_ID")
         self.client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET")
@@ -17,6 +17,7 @@ class IntelliMailEngine:
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY missing from secrets.")
 
+        # FIX: Changed model to 'gemini-1.5-pro' without prefixes to resolve 404
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-pro", 
             temperature=0.2,
@@ -25,7 +26,7 @@ class IntelliMailEngine:
         self.structured_llm = self.llm.with_structured_output(EmailAnalysis)
 
     def get_google_auth_url(self):
-        """Now properly contained within the class to fix AttributeErrors."""
+        """Now properly inside the class to stop AttributeErrors."""
         client_config = {
             "web": {
                 "client_id": self.client_id,
@@ -43,9 +44,9 @@ class IntelliMailEngine:
         return auth_url
 
     def fetch_live_emails(self, credentials):
-        """Fetches real messages from the Gmail API."""
+        """Fetches 15 most recent emails for batch sorting."""
         service = build('gmail', 'v1', credentials=credentials)
-        results = service.users().messages().list(userId='me', maxResults=10).execute()
+        results = service.users().messages().list(userId='me', maxResults=15).execute()
         messages = results.get('messages', [])
         
         email_data = []
@@ -54,13 +55,22 @@ class IntelliMailEngine:
             headers = m['payload']['headers']
             subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
             sender = next((h['value'] for h in headers if h['name'] == 'From'), "Unknown")
-            email_data.append({"id": msg['id'], "sender": sender, "subject": subject, "body": m['snippet']})
+            email_data.append({
+                "id": msg['id'], 
+                "sender": sender, 
+                "subject": subject, 
+                "body": m['snippet']
+            })
         return email_data
 
     def analyze_email(self, content: str, sender_info: str) -> EmailAnalysis:
-        """Categorizes email into high-stake vaults: FINANCIAL, CLIENTS, or REGULAR."""
+        """Categorizes mail into high-stake vaults for Garrison Financial."""
+        system_prompt = """
+        You are the CEO of Garrison Financial. 
+        Categorize into: FINANCIAL (transfers/legal), CLIENTS (direct inquiries), or REGULAR (news/other).
+        """
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are the CEO of Garrison Financial. Categorize this email into FINANCIAL, CLIENTS, or REGULAR."),
-            ("user", "Sender: {context}\nContent: {content}")
+            ("system", system_prompt),
+            ("user", "Sender: {context}\n\nContent:\n{content}")
         ])
         return (prompt | self.structured_llm).invoke({"context": sender_info, "content": content})
