@@ -8,22 +8,22 @@ from models import EmailAnalysis, Category
 
 class IntelliMailEngine:
     def __init__(self):
-        """Initializes the engine with Scottsdale executive settings."""
+        # Fetching credentials from Streamlit Secrets
         self.api_key = st.secrets["GOOGLE_API_KEY"]
         self.client_id = st.secrets["GOOGLE_CLIENT_ID"]
         self.client_secret = st.secrets["GOOGLE_CLIENT_SECRET"]
-        self.redirect_uri = "https://intellimail.streamlit.app/"
+        # Ensure this matches your Authorized Redirect URI in Google Console
+        self.redirect_uri = "https://intellimail.streamlit.app/" 
 
-        # Fixed model naming to prevent 404 errors
+        # Initialize Gemini 1.5 Pro
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-3-flash-preview", 
-            temperature=0.2, # Low temperature for professional accuracy
+            temperature=0.2,
             google_api_key=self.api_key
         )
         self.structured_llm = self.llm.with_structured_output(EmailAnalysis)
 
     def get_google_auth_url(self):
-        """Generates the secure login link for the UI."""
         client_config = {
             "web": {
                 "client_id": self.client_id,
@@ -41,7 +41,6 @@ class IntelliMailEngine:
         return auth_url
 
     def fetch_live_emails(self, credentials):
-        """Connects to real Gmail and pulls the latest 10 messages."""
         service = build('gmail', 'v1', credentials=credentials)
         results = service.users().messages().list(userId='me', maxResults=10).execute()
         messages = results.get('messages', [])
@@ -61,13 +60,12 @@ class IntelliMailEngine:
         return email_list
 
     def generate_briefing(self, content: str, sender: str) -> EmailAnalysis:
-        """One-shot prompt to categorize, summarize, and draft."""
         system_prompt = """
         You are the Elite Executive Assistant for Garrison Financial. 
         Analyze the email and provide:
         1. CATEGORY: FINANCIAL (legal/money), CLIENTS (direct leads), or REGULAR.
-        2. SUMMARY: A 1-sentence BLUF (Bottom Line Up Front).
-        3. DRAFT: A professional, concise Scottsdale-style reply.
+        2. SUMMARY: A 1-sentence BLUF summary.
+        3. DRAFT: A professional Scottsdale-executive style reply.
         """
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
