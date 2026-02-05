@@ -2,6 +2,12 @@ from pydantic import BaseModel, Field
 from typing import List
 from enum import Enum
 
+class Category(str, Enum):
+    FINANCIAL = "FINANCIAL"
+    CLIENTS = "CLIENTS"
+    REGULAR = "REGULAR"
+    NEWS = "NEWS"
+
 class PriorityLevel(str, Enum):
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
@@ -10,10 +16,10 @@ class PriorityLevel(str, Enum):
 
 class EmailAnalysis(BaseModel):
     summary_executive: str = Field(description="1-line summary")
-    summary_detailed: str = Field(description="Bullet points of core facts")
+    summary_bullets: List[str] = Field(description="Core facts")
+    category: Category # The new folder logic
     priority: PriorityLevel
     priority_reasoning: str
     action_items: List[str]
     suggested_reply: str
-    tone_detected: str
-    confidence_score: float
+    confidence_score: int
