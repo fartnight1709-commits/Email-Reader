@@ -19,7 +19,7 @@ class IntelliMailEngine:
 
         # FIX: Changed model to 'gemini-1.5-pro' without prefixes to resolve 404
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro", 
+            model="gemini-3-flash-preview", 
             temperature=0.2,
             google_api_key=self.api_key
         )
