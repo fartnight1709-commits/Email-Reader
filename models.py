@@ -15,11 +15,7 @@ class PriorityLevel(str, Enum):
     LOW = "LOW"
 
 class EmailAnalysis(BaseModel):
-    summary_executive: str = Field(description="1-line summary")
-    summary_bullets: List[str] = Field(description="Core facts")
-    category: Category # The new folder logic
-    priority: PriorityLevel
-    priority_reasoning: str
-    action_items: List[str]
-    suggested_reply: str
-    confidence_score: int
+    summary_executive: str = Field(description="1-line executive summary of the email.")
+    category: Category = Field(description="The vault this email belongs in.")
+    priority: PriorityLevel = Field(description="The urgency of the communication.")
+    suggested_reply: str = Field(description="A professional draft for the CEO.")
