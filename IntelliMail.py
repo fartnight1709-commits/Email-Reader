@@ -1,76 +1,57 @@
 import streamlit as st
-import os
-from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
-from models import EmailAnalysis, PriorityLevel
+import IntelliMail as engine
+from models import Category
 
-# Garrison Financial Executive Configuration
-LLM_MODEL = "gemini-1.5-pro"
-TEMPERATURE = 0.2
+st.set_page_config(page_title="IntelliMail Pro", layout="wide")
 
-class IntelliMailEngine:
-    def __init__(self):
-        """Initializes the engine using secure secrets, not files."""
-        self.api_key = st.secrets.get("GOOGLE_API_KEY")
-        self.client_id = st.secrets.get("GOOGLE_CLIENT_ID")
-        self.client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET")
-        self.redirect_uri = "https://intellimail.streamlit.app/" 
-        
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY missing from Streamlit Secrets.")
+# Executive Styling
+st.markdown("""
+    <style>
+    .stApp { background-color: #0F172A; color: #F8FAFC; }
+    .email-card { 
+        background: #1E293B; padding: 15px; border-radius: 8px; 
+        border-left: 5px solid #64748B; margin-bottom: 10px; 
+    }
+    .fin-card { border-left-color: #EF4444; } /* Red for Financial */
+    .cli-card { border-left-color: #38BDF8; } /* Blue for Clients */
+    </style>
+""", unsafe_allow_html=True)
 
-        self.llm = ChatGoogleGenerativeAI(
-            model=LLM_MODEL, 
-            temperature=TEMPERATURE,
-            google_api_key=self.api_key
-        )
-        self.structured_llm = self.llm.with_structured_output(EmailAnalysis)
+if 'credentials' not in st.session_state:
+    # (Insert your Google Login Button code here)
+    st.title("Please Sign In")
+else:
+    ai = engine.IntelliMailEngine()
+    
+    # 1. Fetch Real Emails
+    raw_emails = ai.fetch_live_emails(st.session_state.credentials)
+    
+    # 2. Run Gemini on the batch (This makes the AI "work")
+    if 'processed_inbox' not in st.session_state:
+        with st.spinner("Gemini is analyzing your vaults..."):
+            st.session_state.processed_inbox = ai.batch_analyze(raw_emails)
 
-    def get_google_auth_url(self):
-        """Constructs the OAuth flow directly from secrets to read live emails."""
-        client_config = {
-            "web": {
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "auth_uri": "https://accounts.google.com/o/oauth2/v2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        }
-        flow = Flow.from_client_config(
-            client_config,
-            scopes=["https://www.googleapis.com/auth/gmail.readonly"],
-            redirect_uri=self.redirect_uri
-        )
-        auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
-        return auth_url
+    # 3. Create the Separate Inboxes
+    tab_fin, tab_clients, tab_misc = st.tabs(["💰 Financial Vault", "🤝 Clients", "📬 Regular"])
 
-    def fetch_live_emails(self, credentials):
-        """Connects to your real Gmail inbox and pulls the latest 10 messages."""
-        service = build('gmail', 'v1', credentials=credentials)
-        results = service.users().messages().list(userId='me', maxResults=10).execute()
-        messages = results.get('messages', [])
-        
-        email_data = []
-        for msg in messages:
-            m = service.users().messages().get(userId='me', id=msg['id']).execute()
-            headers = m['payload']['headers']
-            subject = next(h['value'] for h in headers if h['name'] == 'Subject')
-            sender = next(h['value'] for h in headers if h['name'] == 'From')
-            email_data.append({
-                "id": msg['id'],
-                "sender": sender,
-                "subject": subject,
-                "body": m['snippet']
-            })
-        return email_data
+    def render_list(category_type, css_class):
+        items = [e for e in st.session_state.processed_inbox if e['ai'].category == category_type]
+        if not items:
+            st.caption(f"No {category_type.lower()} items detected.")
+        for e in items:
+            with st.container():
+                st.markdown(f"<div class='email-card {css_class}'><b>{e['sender']}</b><br>{e['ai'].summary_executive}</div>", unsafe_allow_html=True)
+                if st.button("Open Intelligence", key=e['id']):
+                    st.session_state.active_mail = e
 
-    def analyze_email(self, content: str, sender_info: str = "Unknown") -> EmailAnalysis:
-        """AI analysis for live content."""
-        system_prompt = "You are the CEO of Garrison Financial. Analyze for precision and prestige."
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            ("user", "Sender: {context}\n\nContent:\n{content}")
-        ])
-        return (prompt | self.structured_llm).invoke({"context": sender_info, "content": content})
+    with tab_fin:
+        render_list(Category.FINANCIAL, "fin-card")
+
+    with tab_clients:
+        render_list(Category.CLIENTS, "cli-card")
+
+    with tab_misc:
+        # Show both Regular and News here
+        items = [e for e in st.session_state.processed_inbox if e['ai'].category in [Category.REGULAR, Category.NEWS]]
+        for e in items:
+            st.write(f"**{e['sender']}**: {e['ai'].summary_executive}")
